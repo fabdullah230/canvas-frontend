@@ -1,4 +1,3 @@
-
 import Cookies from 'js-cookie'
 import {useState, useEffect} from 'react'
 import axios from 'axios'
@@ -8,29 +7,32 @@ import { Accordion , AccordionSummary, AccordionDetails} from '@material-ui/core
 function App() {
 
 
+  var url = new URL(window.location.href); //searcing for the JWT token from URL parameter
+  var data = url.searchParams.get("data"); //implemented this way because cookies dont work in iframe
+  //console.log(data);
 
-  var url = new URL(window.location.href);
-  var data = url.searchParams.get("data");
-  console.log(data);
-
-  const [name, setName] = useState(Cookies.get("CanvasVeriguideIntegration") || data);
-  const [cookieValid, setCookieValid] = useState(false);
-  
-  const [info, setInfo] = useState({})
+  const [cookieData, setCookieData] = useState(Cookies.get("CanvasVeriguideIntegration") || data); //sets data from Cookie or URL-params
+  const [cookieValid, setCookieValid] = useState(false); //current state of cookie validation
+  const [info, setInfo] = useState({}) //Jwt object state
 
   
+  /**
+   * upon page load, sends GET request to backend to check if JWT from cookie/URL-param is valid
+   * if valid, sets cookie validation state (cookieValid) as true
+   *           sets the JWT token as cookieData
+   *           parses the JWT token and sets the Json object as info
+   * if invalid, backend code sends status code 500, error is console logged, app does not show any information
+  */
 
   useEffect(() => {
-    
-    console.log(Cookies.get("CanvasVeriguideIntegration"));
     axios.get(`http://192.168.1.116:8090/cookie`, {
       headers:{
-        'data' : name
+        'data' : cookieData
       }
     })
     .then(res => {
       setCookieValid(true)
-      setName(res.data)
+      setCookieData(res.data)
       setInfo(jwt(res.data))
     })
     .catch(err => {
@@ -39,7 +41,7 @@ function App() {
 
   }, [])
 
-
+//hook to change between expand|collapse
 const [showing, setShowing] = useState(false)
 
   return (
@@ -48,20 +50,7 @@ const [showing, setShowing] = useState(false)
         you have reached the dummy frontend of canvas veriguide integration
       </code>
       <br></br>
-
-
-
-
-
-
-
-
-
-
-
-
-
-      
+   
       {/* displaying cookies */}
       {cookieValid ? (
         <Accordion>
@@ -69,7 +58,7 @@ const [showing, setShowing] = useState(false)
             <code>Your cookie is valid</code>
           </AccordionSummary>
           <AccordionDetails>
-            <code>{name}</code>
+            <code>{cookieData}</code>
           </AccordionDetails>
         </Accordion>
       ) : (
@@ -84,7 +73,8 @@ const [showing, setShowing] = useState(false)
             click to {showing ? <code>collapse</code> : <code>expand</code>} params
           </code>
         </AccordionSummary>
-        {Object.keys(info).map((key, i) => (
+        {//mapping through all jwt claims
+        Object.keys(info).map((key, i) => (
           <AccordionDetails key={i}>
             <code>
               {key} : {info[key]}
